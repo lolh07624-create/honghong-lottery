@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>红红管家 · 专属抽奖</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased;}
+        :root{
+            --main-gold:#D4AF37;
+            --light-gold:#FFD700;
+            --dark-gold:#B8860B;
+            --bg-dark:#12121F;
+            --bg-card:#1A1A2E;
+            --text-primary:#FFFFFF;
+            --text-secondary:#B0B0C5;
+            --border-subtle:rgba(212,175,55,0.2);
+            --shadow-gold:0 0 24px rgba(212,175,55,0.35);
+            --shadow-card:0 8px 32px rgba(0,0,0,0.4);
+        }
+        body{
+            background:radial-gradient(circle at top center,#1E1E38 0%,var(--bg-dark) 60%);
+            color:var(--text-primary);
+            min-height:100vh;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            padding:24px 16px;
+            overflow-x:hidden;
+        }
+        /* 基础动画：入场、呼吸、弹跳 */
+        @keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes breathe{0%,100%{opacity:0.8;}50%{opacity:1;}}
+        @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.04);}}
+        @keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1;}100%{transform:translateY(120vh) rotate(1080deg);opacity:0;}}
+        @keyframes wheelSpin{from{transform:rotate(0deg);}to{transform:rotate(calc(360deg * 9 + var(--stop-deg)));}}
+        @keyframes eggRattle{0%,100%{transform:rotate(0deg);}25%{transform:rotate(-6deg);}75%{transform:rotate(6deg);}}
+        @keyframes boxFlip{0%{transform:perspective(800px) rotateY(0deg);}50%{transform:perspective(800px) rotateY(180deg);}100%{transform:perspective(800px) rotateY(360deg);}}
+        @keyframes modalPop{0%{transform:scale(0.8) translateY(10px);opacity:0;}100%{transform:scale(1) translateY(0);opacity:1;}}
+
+        /* 头部信息区 */
+        .header{
+            text-align:center;
+            margin-bottom:36px;
+            animation:fadeUp 0.7s ease-out;
+        }
+        .brand{
+            font-size:18px;
+            font-weight:600;
+            color:var(--main-gold);
+            margin-bottom:8px;
+            letter-spacing:1px;
+        }
+        .count-info{
+            font-size:15px;
+            color:var(--text-secondary);
+            background:rgba(212,175,55,0.08);
+            padding:6px 16px;
+            border-radius:20px;
+            display:inline-block;
+            border:1px solid var(--border-subtle);
+        }
+        .count-info strong{color:var(--light-gold);font-weight:700;}
+
+        /* 砸金蛋：质感、光影、交互 */
+        .egg-wrap{display:none;gap:28px;flex-wrap:wrap;justify-content:center;animation:fadeUp 0.7s ease-out 0.15s both;}
+        .egg{
+            width:120px;height:160px;
+            background:radial-gradient(circle at 25% 15%,#FFF9E6 0%,var(--light-gold) 30%,var(--main-gold) 60%,var(--dark-gold) 100%);
+            border-radius:52% 52% 48% 48%;
+            display:flex;align-items:center;justify-content:center;
+            font-size:52px;
+            cursor:pointer;
+            transition:all 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+            border:3px solid rgba(255,255,255,0.25);
+            box-shadow:var(--shadow-gold),inset 0 -12px 24px rgba(0,0,0,0.15);
+            position:relative;
+            overflow:hidden;
+        }
+        .egg::before{
+            content:"";
+            position:absolute;
+            top:0;left:-120%;
+            width:100%;height:100%;
+            background:linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent);
+            transition:left 0.7s ease-out;
+        }
+        .egg:hover::before{left:120%;}
+        .egg:hover{transform:translateY(-12px) scale(1.05);box-shadow:0 0 36px rgba(255,215,0,0.5);}
+        .egg.shaking{animation:eggRattle 0.25s ease-in-out 4;}
+        .egg.broken{
+            background:linear-gradient(180deg,#2A2A3E,#1A1A2E);
+            transform:scale(0.92);
+            animation:none;
+            cursor:default;
+            box-shadow:inset 0 0 20px rgba(0,0,0,0.5);
+        }
+        .egg.broken::after{content:"💥";font-size:64px;animation:fadeUp 0.4s ease-out;}
+
+        /* 幸运转盘：专业布局、丝滑旋转、精准停点 */
+        .wheel-wrap{display:none;position:relative;width:420px;height:420px;animation:fadeUp 0.7s ease-out 0.15s both;}
+        .wheel{
+            width:100%;height:100%;
+            border-radius:50%;
+            border:10px solid var(--main-gold);
+            position:relative;
+            overflow:hidden;
+            background:var(--bg-card);
+            box-shadow:var(--shadow-gold),inset 0 0 30px rgba(0,0,0,0.3);
+            transition:none;
+        }
+        .wheel-item{
+            position:absolute;width:50%;height:50%;left:50%;top:0;
+            transform-origin:bottom left;
+            display:flex;align-items:center;justify-content:center;
+            font-size:15px;font-weight:700;color:#000;
+            border-right:1px solid rgba(0,0,0,0.12);
+            text-shadow:0 0 4px rgba(255,255,255,0.4);
+        }
+        .wheel-item span{transform:rotate(calc(180deg / var(--seg) * 0.5));padding-top:36px;}
+        .wheel-pointer{
+            position:absolute;top:-36px;left:50%;
+            transform:translateX(-50%);
+            width:0;height:0;
+            border-left:32px solid transparent;border-right:32px solid transparent;border-top:64px solid var(--light-gold);
+            z-index:10;
+            filter:drop-shadow(0 0 12px rgba(255,215,0,0.7));
+            cursor:pointer;
+            transition:transform 0.2s ease;
+        }
+        .wheel-pointer:hover{transform:translateX(-50%) scale(1.1);}
+        .wheel.spinning{animation:wheelSpin 6.8s cubic-bezier(0.18,0.75,0.1,1) forwards;}
+
+        /* 神秘盲盒：立体层次、翻转动效、稀有度区分 */
+        .box-wrap{display:none;gap:22px;flex-wrap:wrap;justify-content:center;animation:fadeUp 0.7s ease-out 0.15s both;}
+        .box{
+            width:130px;height:170px;
+            border-radius:18px;
+            background:linear-gradient(160deg,#FFF9E6 0%,var(--light-gold) 25%,var(--main-gold) 55%,var(--dark-gold) 100%);
+            display:flex;align-items:center;justify-content:center;
+            font-size:52px;
+            cursor:pointer;
+            transition:all 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+            border:3px solid rgba(255,255,255,0.3);
+            box-shadow:var(--shadow-gold);
+            position:relative;
+            perspective:900px;
+        }
+        .box::after{
+            content:"";
+            position:absolute;
+            inset:0;
+            border-radius:16px;
+            background:linear-gradient(180deg,transparent 50%,rgba(0,0,0,0.12) 100%);
+            pointer-events:none;
+        }
+        .box:hover{transform:translateY(-14px) scale(1.05);box-shadow:0 0 40px rgba(255,215,0,0.5);}
+        .box.opened{
+            background:linear-gradient(180deg,#2A2A3E,#1A1A2E);
+            animation:boxFlip 0.9s ease-out forwards;
+            cursor:default;
+            box-shadow:inset 0 0 25px rgba(0,0,0,0.5);
+        }
+        .box.opened::before{
+            content:"已开启";
+            position:absolute;
+            font-size:16px;
+            color:var(--text-secondary);
+            font-weight:600;
+        }
+
+        /* 中奖弹窗：专业仪式感、信息完整 */
+        .win-modal{
+            position:fixed;inset:0;
+            background:rgba(0,0,0,0.9);
+            display:none;align-items:center;justify-content:center;
+            z-index:9999;
+            padding:20px;
+            backdrop-filter:blur(12px);
+        }
+        .win-modal.show{display:flex;}
+        .win-card{
+            background:linear-gradient(145deg,var(--bg-card),#12121F);
+            border-radius:24px;
+            padding:40px 28px;
+            text-align:center;
+            max-width:420px;width:100%;
+            border:2px solid var(--main-gold);
+            box-shadow:0 0 50px rgba(212,175,55,0.4);
+            animation:modalPop 0.5s ease-out;
+            position:relative;
+            overflow:hidden;
+        }
+        .confetti{
+            position:absolute;
+            width:10px;height:10px;
+            animation:confettiFall 3.2s ease-out forwards;
+        }
+        .win-icon{font-size:80px;margin-bottom:16px;animation:pulse 0.9s ease-in-out infinite alternate;}
+        .win-title{font-size:24px;color:var(--light-gold);font-weight:800;margin-bottom:12px;letter-spacing:2px;}
+        .win-name{font-size:30px;font-weight:900;color:var(--light-gold);margin-bottom:12px;letter-spacing:3px;}
+        .win-desc{font-size:15px;color:var(--text-secondary);margin-bottom:24px;line-height:1.7;}
+        .win-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+        .btn{
+            padding:12px 28px;
+            border-radius:10px;
+            border:none;
+            font-weight:700;
+            font-size:15px;
+            cursor:pointer;
+            transition:all 0.25s ease;
+        }
+        .btn.primary{background:linear-gradient(90deg,var(--dark-gold),var(--light-gold));color:#000;box-shadow:0 4px 16px rgba(212,175,55,0.4);}
+        .btn.primary:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(255,215,0,0.5);}
+        .btn.secondary{background:rgba(255,255,255,0.08);color:var(--text-primary);border:1px solid var(--border-subtle);}
+        .btn.secondary:hover{background:rgba(255,255,255,0.15);}
+
+        .error-box{color:#FF6B6B;font-size:16px;text-align:center;animation:fadeUp 0.5s ease-out;}
+    </style>
+</head>
+<body>
+<div id="errBox" class="error-box" style="display:none;"></div>
+<div id="gameWrap" style="display:none;width:100%;max-width:480px;">
+    <div class="header">
+        <div class="brand">红红管家 · 专属抽奖</div>
+        <div class="count-info">剩余抽奖次数：<span id="countLeft">0</span> 次</div>
+    </div>
+    <div class="egg-wrap" id="eggList"></div>
+    <div class="wheel-wrap" id="wheelWrap"><div class="wheel" id="wheel"></div><div class="wheel-pointer"></div></div>
+    <div class="box-wrap" id="boxList"></div>
+</div>
+
+<div class="win-modal" id="winModal">
+    <div class="win-card">
+        <div class="win-icon">🎉</div>
+        <div class="win-title">恭喜您中奖啦</div>
+        <div class="win-name" id="winName"></div>
+        <div class="win-desc" id="winNote"></div>
+        <div class="win-actions">
+            <button class="btn secondary" id="copyVoucher">复制中奖凭证</button>
+            <button class="btn primary" id="closeWin">确认领取</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const SIGN = "HHGJ_2026_GAME_PROFESSIONAL";
+const STORAGE_KEY = "HHGJ_DATA_GAME";
+let prizeData, winRecord, gameInfo, usedCount = 0;
+
+function showErr(msg){document.getElementById("errBox").style.display="block";document.getElementById("errBox").innerText=msg;}
+function loadConfig(){
+    const defaultPrize = {
+        egg: [{name:"8元彩金",stock:20,rate:52.6},{name:"18元彩金",stock:10,rate:26.3},{name:"28元彩金",stock:5,rate:13.2},{name:"38元彩金",stock:3,rate:7.9}],
+        wheel: [{name:"谢谢参与",color:"#F5F5F5",rate:40},{name:"5元优惠券",color:"#E3F2FD",rate:30},{name:"15元优惠券",color:"#FFF8E1",rate:20},{name:"免单奖励",color:"#FFD700",rate:8},{name:"终极大奖",color:"#FF4D4F",rate:2}],
+        box: [{name:"再来一次",rare:"普通",rate:45},{name:"精美小礼品",rare:"普通",rate:35},{name:"20元通用券",rare:"稀有",rate:15},{name:"惊喜大礼包",rare:"史诗",rate:4},{name:"超级终极大奖",rare:"传说",rate:1}]
+    };
+    try{
+        const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        prizeData = local.prizePool || defaultPrize;
+        winRecord = local.winList || [];
+    }catch(e){prizeData = defaultPrize; winRecord = [];}
+}
+
+function parseUrl(){
+    const hash = window.location.hash.slice(1);
+    if(!hash) return showErr("无效链接，请联系管理员获取专属参与入口");
+    const p = new URLSearchParams(hash);
+    const sign = p.get("s"), uid = decodeURIComponent(p.get("id")), type = p.get("t"), total = Number(p.get("n")), expire = Number(p.get("e"));
+    if(!sign||!uid||!type||!total||!expire) return showErr("链接参数异常，请重新获取");
+    if(Date.now() > expire) return showErr("链接已过期，请联系管理员重新生成");
+    try{
+        const verify = atob(sign);
+        if(!verify.includes(SIGN) || !verify.includes(uid)) throw new Error("签名不匹配");
+        gameInfo = {uid,type,total};
+        document.getElementById("countLeft").innerText = total;
+        document.getElementById("gameWrap").style.display = "block";
+        initGame();
+    }catch(err){showErr("链接无效或已被篡改，请联系管理员");}
+}
+
+function initGame(){
+    if(gameInfo.type === "egg"){
+        document.getElementById("eggList").style.display = "flex";
+        for(let i=0;i<gameInfo.total;i++){
+            const egg = document.createElement("div");
+            egg.className = "egg"; egg.innerText = "🥚";
+            egg.onclick = () => openEgg(egg);
+            document.getElementById("eggList").appendChild(egg);
+        }
+    }else if(gameInfo.type === "wheel"){
+        document.getElementById("wheelWrap").style.display = "block";
+        const wheel = document.getElementById("wheel"); wheel.innerHTML = "";
+        const list = prizeData.wheel, seg = list.length, deg = 360/seg;
+        list.forEach((item,idx)=>{
+            const segEl = document.createElement("div");
+            segEl.className = "wheel-item";
+            segEl.style.background = item.color;
+            segEl.style.transform = `rotate(${idx*deg}deg)`;
+            segEl.style.setProperty("--seg",seg);
+            segEl.innerHTML = `<span>${item.name}</span>`;
+            wheel.appendChild(segEl);
+        });
+        document.querySelector(".wheel-pointer").onclick = spinWheel;
+    }else{
+        document.getElementById("boxList").style.display = "flex";
+        for(let i=0;i<gameInfo.total;i++){
+            const box = document.createElement("div");
+            box.className = "box"; box.innerText = "🎁";
+            box.onclick = () => openBox(box);
+            document.getElementById("boxList").appendChild(box);
+        }
+    }
+}
+
+function getResult(type){
+    let rand = Math.random()*100, sum = 0;
+    for(let item of prizeData[type]){sum += item.rate; if(rand <= sum) return item;}
+    return prizeData[type][0];
+}
+
+function showConfetti(){
+    const colors = ["#FFD700","#FF6B6B","#4ECDC4","#45B7D1","#96CEB4","#FF8C00"];
+    const card = document.querySelector(".win-card");
+    for(let i=0;i<36;i++){
+        const c = document.createElement("div");
+        c.className = "confetti";
+        c.style.left = `${Math.random()*100}%`;
+        c.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
+        c.style.animationDelay = `${Math.random()*0.6}s`;
+        card.appendChild(c);
+        setTimeout(()=>c.remove(),3200);
+    }
+}
+
+function showWin(prize,extra){
+    const voucher = btoa(`${SIGN}|${gameInfo.uid}|${prize.name}|${Date.now()}|${Math.random().toString(36).slice(2,12)}`).replace(/=/g,"");
+    winRecord.push({voucher,uid:gameInfo.uid,prize:prize.name,extra:extra||"",time:new Date().toLocaleString()});
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({prizePool:prizeData,winList:winRecord}));
+    document.getElementById("winName").innerText = prize.name;
+    document.getElementById("winNote").innerText = extra||"";
+    document.getElementById("winModal").classList.add("show");
+    showConfetti();
+    window.LAST_VOUCHER = voucher;
+}
+
+document.getElementById("copyVoucher").onclick = () => {
+    navigator.clipboard.writeText(window.LAST_VOUCHER||"");
+    alert("✅ 中奖凭证已复制，请联系管理员核验兑换");
+};
+document.getElementById("closeWin").onclick = () => {
+    document.getElementById("winModal").classList.remove("show");
+};
+
+function openEgg(el){
+    if(el.classList.contains("broken") || usedCount >= gameInfo.total) return;
+    el.classList.add("shaking");
+    setTimeout(()=>{
+        el.classList.remove("shaking"); el.classList.add("broken");
+        usedCount++;
+        showWin(getResult("egg"),`第${usedCount}次抽奖`);
+        document.getElementById("countLeft").innerText = gameInfo.total - usedCount;
+    },950);
+}
+
+function spinWheel(){
+    const wheel = document.getElementById("wheel");
+    if(wheel.classList.contains("spinning") || usedCount >= gameInfo.total) return;
+    usedCount++;
+    const prize = getResult("wheel");
+    const list = prizeData.wheel, idx = list.indexOf(prize), deg = 360/list.length;
+    const stop = 360 - (idx*deg + deg/2);
+    wheel.style.setProperty("--stop-deg",stop+"deg");
+    wheel.classList.add("spinning");
+    setTimeout(()=>{
+        wheel.classList.remove("spinning");
+        showWin(prize,`第${usedCount}次抽奖`);
+        document.getElementById("countLeft").innerText = gameInfo.total - usedCount;
+    },6800);
+}
+
+function openBox(el){
+    if(el.classList.contains("opened") || usedCount >= gameInfo.total) return;
+    el.classList.add("opened");
+    usedCount++;
+    const prize = getResult("box");
+    showWin(prize,`第${usedCount}次抽奖 · ${prize.rare}`);
+    document.getElementById("countLeft").innerText = gameInfo.total - usedCount;
+}
+
+window.onload = () => {loadConfig(); parseUrl();};
+</script>
+</body>
+</html>
