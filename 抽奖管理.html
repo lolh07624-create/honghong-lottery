@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>红红VIP抽奖管理后台</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei",sans-serif;}
+        body{background:#121220;color:#fff;min-height:100vh;padding:30px 16px;}
+        .wrap{max-width:900px;margin:0 auto;}
+        .title{font-size:32px;color:#FFD700;font-weight:900;text-align:center;margin-bottom:30px;letter-spacing:4px;}
+        .card{background:#1A1A33;border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid rgba(255,215,0,0.2);}
+        .card h3{font-size:20px;color:#FFD700;margin-bottom:18px;}
+        .row{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+        .item{flex:1;min-width:180px;}
+        label{display:block;margin-bottom:6px;color:#ccc;font-size:14px;}
+        input,select,textarea{width:100%;padding:10px 12px;border:1px solid rgba(255,215,0,0.3);border-radius:8px;background:#121220;color:#fff;font-size:15px;}
+        button{padding:10px 24px;border:none;border-radius:8px;background:linear-gradient(90deg,#B8860B,#FFD700);color:#000;font-weight:bold;cursor:pointer;transition:all 0.2s;}
+        button:hover{transform:translateY(-2px);box-shadow:0 0 20px rgba(255,215,0,0.5);}
+        .res{margin-top:18px;padding:14px;background:rgba(0,0,0,0.4);border-radius:8px;word-break:break-all;}
+        .res p{margin-bottom:8px;color:#ccc;}
+        .res strong{color:#FFD700;}
+        .copy{margin-left:10px;background:#222;border:1px solid #FFD700;}
+        .log{margin-top:12px;max-height:200px;overflow-y:auto;}
+        .log-item{padding:8px 0;border-bottom:1px solid rgba(255,215,0,0.1);font-size:13px;color:#aaa;}
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="title">红红VIP专属抽奖 · 管理后台</div>
+
+    <div class="card">
+        <h3>🎫 生成参与链接/二维码</h3>
+        <div class="row">
+            <div class="item">
+                <label>会员唯一标识（随便填，区分会员）</label>
+                <input type="text" id="uid" placeholder例：vip001" value="vip001">
+            </div>
+            <div class="item">
+                <label>游戏类型</label>
+                <select id="type">
+                    <option value="egg">砸金蛋</option>
+                    <option value="wheel">幸运转盘</option>
+                    <option value="box">神秘盲盒</option>
+                </select>
+            </div>
+            <div class="item">
+                <label>抽奖次数（1-99）</label>
+                <input type="number" id="num" min="1" max="99" value="3">
+            </div>
+            <div class="item">
+                <label>链接有效期（小时）</label>
+                <input type="number" id="hour" min="1" max="720" value="24">
+            </div>
+        </div>
+        <button onclick="buildLink()">生成链接与二维码</button>
+        <div class="res" id="out" style="display:none;">
+            <p>✅ 生成成功（仅您可见）：</p>
+            <p>链接：<strong id="linkVal"></strong><button class="copy" onclick="copyText('linkVal')">复制</button></p>
+            <p>二维码：<span id="qrcodeBox"></span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📊 奖池配置（修改后自动同步）</h3>
+        <textarea id="pool" rows="10" placeholder="直接修改保存即可">
+{
+    "egg": [
+        {"name":"8元彩金","rate":52.6},
+        {"name":"18元彩金","rate":26.3},
+        {"name":"28元彩金","rate":13.2},
+        {"name":"38元彩金","rate":7.9}
+    ],
+    "wheel": [
+        {"name":"谢谢参与","color":"#F8F9FA","rate":40},
+        {"name":"5元优惠券","color":"#E7F3FF","rate":30},
+        {"name":"15元优惠券","color":"#FFF8E6","rate":20},
+        {"name":"免单福利","color":"#FFD700","rate":8},
+        {"name":"终极大奖","color":"#FF4D4F","rate":2}
+    ],
+    "box": [
+        {"name":"再来一次","rate":45},
+        {"name":"精美小礼品","rate":35},
+        {"name":"20元通用券","rate":15},
+        {"name":"惊喜大礼包","rate":4},
+        {"name":"超级终极大奖","rate":1}
+    ]
+}
+        </textarea>
+        <div style="margin-top:12px;">
+            <button onclick="savePool()">保存奖池</button>
+            <span style="margin-left:15px;color:#aaa;font-size:13px;">保存后新链接立即生效，旧链接不受影响</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📝 操作与中奖记录</h3>
+        <div class="log" id="logList"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+<script>
+// ⚠️ 签名和游戏页必须完全一致！
+const SIGN = "HHGJ_2026_GAME_FINAL_PERFECT";
+const POOL_KEY = "HHGJ_PRIZE_POOL";
+const LOG_KEY = "HHGJ_ADMIN_LOG";
+
+// 初始化
+window.onload = () => {
+    const localPool = localStorage.getItem(POOL_KEY);
+    if(localPool) document.getElementById("pool").value = localPool;
+    loadLog();
+};
+
+// 生成链接
+function buildLink(){
+    const uid = document.getElementById("uid").value.trim();
+    const type = document.getElementById("type").value;
+    const num = parseInt(document.getElementById("num").value);
+    const hour = parseInt(document.getElementById("hour").value);
+    if(!uid||!num||num<1||hour<1) return alert("请填写完整且合法的参数");
+    
+    const expire = Date.now() + hour*3600*1000;
+    const sign = btoa(`${SIGN}|${uid}|${type}|${num}|${expire}`);
+    const fileUrl = window.location.href.replace("抽奖管理.html","抽奖游戏.html");
+    const finalLink = `${fileUrl}#s=${sign}&id=${encodeURIComponent(uid)}&t=${type}&n=${num}&e=${expire}`;
+
+    document.getElementById("linkVal").innerText = finalLink;
+    document.getElementById("out").style.display = "block";
+    document.getElementById("qrcodeBox").innerHTML = "";
+    QRCode.toCanvas(finalLink, {width:180,margin:2}, (err,canvas)=>{
+        if(!err) document.getElementById("qrcodeBox").appendChild(canvas);
+    });
+
+    addLog(`生成链接：会员${uid} | ${type==="egg"?"砸金蛋":type==="wheel"?"转盘":"盲盒"} | ${num}次 | ${hour}小时有效`);
+}
+
+// 保存奖池
+function savePool(){
+    try{JSON.parse(document.getElementById("pool").value.trim());}
+    catch{return alert("奖池格式有误，请检查JSON格式");}
+    localStorage.setItem(POOL_KEY, document.getElementById("pool").value.trim());
+    alert("✅ 奖池已保存，新链接自动生效");
+    addLog("更新奖池配置");
+}
+
+// 复制
+function copyText(id){
+    const t = document.getElementById(id).innerText;
+    navigator.clipboard.writeText(t).then(()=>alert("已复制到剪贴板"));
+}
+
+// 日志
+function addLog(txt){
+    const arr = JSON.parse(localStorage.getItem(LOG_KEY)||"[]");
+    arr.unshift({time:new Date().toLocaleString(),txt});
+    localStorage.setItem(LOG_KEY, JSON.stringify(arr.slice(0,50)));
+    loadLog();
+}
+function loadLog(){
+    const arr = JSON.parse(localStorage.getItem(LOG_KEY)||"[]");
+    document.getElementById("logList").innerHTML = arr.map(x=>`<div class="log-item">[${x.time}] ${x.txt}</div>`).join("");
+}
+</script>
+</body>
+</html>
