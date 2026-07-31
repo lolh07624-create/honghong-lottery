@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>红红VIP专属抽奖</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased;}
+        :root{
+            --gold-main:#FFD700;
+            --gold-light:#FFF5CC;
+            --gold-dark:#B8860B;
+            --bg-main:#121220;
+            --bg-card:#1A1A33;
+            --text-white:#FFFFFF;
+            --text-gray:#D0D0E8;
+            --border-gold:rgba(255,215,0,0.3);
+            --shadow-gold:0 0 40px rgba(255,215,0,0.5);
+            --shadow-card:0 12px 50px rgba(0,0,0,0.6);
+        }
+        html,body{height:100%;}
+        body{
+            background:radial-gradient(circle at top center,#2A2A55 0%,var(--bg-main) 70%);
+            color:var(--text-white);
+            min-height:100vh;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:flex-start;
+            padding:30px 16px;
+            overflow-x:hidden;
+        }
+
+        @keyframes fadeUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes glowBreath{0%,100%{box-shadow:0 0 25px rgba(255,215,0,0.4);}50%{box-shadow:0 0 50px rgba(255,215,0,0.8);}}
+        @keyframes bounceIn{0%{transform:scale(0.7);opacity:0;}60%{transform:scale(1.1);}100%{transform:scale(1);opacity:1;}}
+        @keyframes confettiFall{0%{transform:translateY(-40px) rotate(0deg);opacity:1;}100%{transform:translateY(180vh) rotate(1800deg);opacity:0;}}
+        @keyframes wheelSpin{from{transform:rotate(0deg);}to{transform:rotate(calc(360deg * 10 + var(--stop-deg)));}}
+        @keyframes eggShake{0%,100%{transform:rotate(0deg);}25%{transform:rotate(-8deg);}75%{transform:rotate(8deg);}}
+        @keyframes boxFlip{0%{transform:perspective(1200px) rotateY(0deg);}50%{transform:perspective(1200px) rotateY(180deg);}100%{transform:perspective(1200px) rotateY(360deg);}}
+        @keyframes starShine{0%,100%{opacity:0.3;transform:scale(0.8);}50%{opacity:1;transform:scale(1.2);}}
+
+        .page-header{
+            text-align:center;
+            margin-bottom:30px;
+            animation:fadeUp 0.7s ease-out;
+        }
+        .vip-title{
+            font-size:26px;
+            font-weight:900;
+            color:var(--gold-main);
+            margin-bottom:10px;
+            letter-spacing:3px;
+            text-shadow:0 0 18px rgba(255,215,0,0.6);
+            animation:glowBreath 2s infinite;
+        }
+        .count-badge{
+            display:inline-block;
+            padding:8px 24px;
+            background:rgba(255,215,0,0.12);
+            border:2px solid var(--border-gold);
+            border-radius:50px;
+            font-size:16px;
+            color:var(--text-gray);
+        }
+        .count-badge strong{color:var(--gold-main);font-weight:800;margin:0 4px;font-size:18px;}
+
+        .egg-container{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;animation:fadeUp 0.8s ease-out 0.1s both;}
+        .golden-egg{
+            width:120px;height:150px;
+            background:radial-gradient(circle at 30% 20%,#FFFFFF 0%,#FFF9CC 20%,var(--gold-light) 45%,var(--gold-main) 70%,var(--gold-dark) 100%);
+            border-radius:55% 55% 50% 50%;
+            display:flex;align-items:center;justify-content:center;
+            font-size:56px;
+            cursor:pointer;
+            transition:all 0.3s cubic-bezier(0.19,1,0.22,1);
+            border:3px solid rgba(255,255,255,0.4);
+            box-shadow:var(--shadow-gold),inset 0 -15px 30px rgba(0,0,0,0.2);
+            position:relative;
+            overflow:hidden;
+        }
+        .golden-egg:hover{transform:translateY(-12px) scale(1.05);box-shadow:0 0 50px rgba(255,215,0,0.7);}
+        .golden-egg.shaking{animation:eggShake 0.18s ease-in-out 5;}
+        .golden-egg.opened{
+            background:linear-gradient(180deg,#333355,#1A1A33);
+            transform:scale(0.9);
+            animation:none;
+            cursor:default;
+            box-shadow:inset 0 0 35px rgba(0,0,0,0.7);
+        }
+        .golden-egg.opened::after{content:"💥";font-size:70px;animation:bounceIn 0.5s ease-out;}
+
+        .wheel-container{display:none;position:relative;width:420px;height:420px;margin:0 auto;animation:fadeUp 0.8s ease-out 0.1s both;}
+        .wheel-outer{
+            width:100%;height:100%;
+            border-radius:50%;
+            border:12px solid var(--gold-main);
+            background:var(--bg-card);
+            box-shadow:var(--shadow-gold),inset 0 0 40px rgba(0,0,0,0.5);
+            position:relative;
+            overflow:hidden;
+        }
+        .wheel-inner{width:100%;height:100%;position:absolute;top:0;left:0;transition:none;}
+        .wheel-segment{
+            position:absolute;width:50%;height:50%;left:50%;top:0;
+            transform-origin:bottom left;
+            display:flex;align-items:center;justify-content:center;
+            font-size:15px;font-weight:700;color:#000;
+            border-right:1px solid rgba(255,255,255,0.2);
+            text-shadow:0 0 5px rgba(255,255,255,0.7);
+        }
+        .wheel-segment span{
+            transform:rotate(calc(180deg / var(--seg) * 0.5));
+            padding-top:40px;
+            text-align:center;
+            line-height:1.3;
+        }
+        .wheel-pointer{
+            position:absolute;top:-35px;left:50%;
+            transform:translateX(-50%);
+            width:0;height:0;
+            border-left:35px solid transparent;border-right:35px solid transparent;border-top:70px solid var(--gold-main);
+            z-index:10;
+            filter:drop-shadow(0 0 18px rgba(255,215,0,0.9));
+            cursor:pointer;
+            transition:transform 0.2s ease;
+            animation:glowBreath 1.5s infinite;
+        }
+        .wheel-pointer::after{
+            content:"点击旋转";
+            position:absolute;
+            top:-50px;left:50%;
+            transform:translateX(-50%);
+            white-space:nowrap;
+            font-size:13px;
+            color:var(--gold-main);
+            font-weight:600;
+            text-shadow:0 0 8px rgba(255,215,0,0.8);
+        }
+        .wheel-pointer:hover{transform:translateX(-50%) scale(1.15);}
+        .wheel-inner.spinning{animation:wheelSpin 7s cubic-bezier(0.14,0.8,0.08,1) forwards;}
+
+        .box-container{display:none;gap:20px;flex-wrap:wrap;justify-content:center;animation:fadeUp 0.8s ease-out 0.1s both;}
+        .mystery-box{
+            width:130px;height:160px;
+            border-radius:18px;
+            background:linear-gradient(180deg,#FFFFFF 0%,#FFF9CC 15%,var(--gold-light) 40%,var(--gold-main) 65%,var(--gold-dark) 100%);
+            display:flex;align-items:center;justify-content:center;
+            font-size:56px;
+            cursor:pointer;
+            transition:all 0.3s cubic-bezier(0.19,1,0.22,1);
+            border:3px solid rgba(255,255,255,0.4);
+            box-shadow:var(--shadow-gold);
+            position:relative;
+            perspective:1200px;
+        }
+        .mystery-box:hover{transform:translateY(-15px) scale(1.05);box-shadow:0 0 50px rgba(255,215,0,0.7);}
+        .mystery-box.opened{
+            background:linear-gradient(180deg,#333355,#1A1A33);
+            animation:boxFlip 1s ease-out forwards;
+            cursor:default;
+            box-shadow:inset 0 0 40px rgba(0,0,0,0.7);
+        }
+        .mystery-box.opened::before{
+            content:"已开启";
+            position:absolute;
+            font-size:18px;
+            color:var(--text-gray);
+            font-weight:700;
+        }
+
+        .win-modal{
+            position:fixed;inset:0;
+            background:rgba(0,0,0,0.95);
+            display:none;align-items:center;justify-content:center;
+            z-index:9999;
+            padding:20px;
+            backdrop-filter:blur(15px);
+        }
+        .win-modal.show{display:flex;}
+        .win-card{
+            background:linear-gradient(160deg,var(--bg-card),var(--bg-main));
+            border-radius:28px;
+            padding:40px 30px;
+            text-align:center;
+            max-width:450px;width:100%;
+            border:4px solid var(--gold-main);
+            box-shadow:0 0 70px rgba(255,215,0,0.6);
+            animation:bounceIn 0.6s ease-out;
+            position:relative;
+            overflow:hidden;
+        }
+        .confetti-piece{
+            position:absolute;
+            width:12px;height:12px;
+            animation:confettiFall 3.5s ease-out forwards;
+        }
+        .star-deco{
+            position:absolute;
+            font-size:22px;
+            color:var(--gold-main);
+            animation:starShine 1.5s infinite;
+        }
+        .win-icon{font-size:90px;margin-bottom:20px;animation:glowBreath 1s infinite alternate;}
+        .win-title{font-size:28px;color:var(--gold-main);font-weight:900;margin-bottom:16px;letter-spacing:4px;}
+        .win-prize{font-size:32px;font-weight:900;color:var(--gold-light);margin-bottom:12px;letter-spacing:5px;}
+        .win-desc{font-size:16px;color:var(--text-gray);margin-bottom:28px;line-height:1.8;}
+        .btn-group{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
+        .btn{
+            padding:14px 32px;
+            border-radius:12px;
+            border:none;
+            font-weight:800;
+            font-size:16px;
+            cursor:pointer;
+            transition:all 0.25s ease;
+        }
+        .btn.primary{
+            background:linear-gradient(90deg,var(--gold-dark),var(--gold-main));
+            color:#000;
+            box-shadow:0 6px 20px rgba(255,215,0,0.5);
+        }
+        .btn.primary:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(255,215,0,0.7);}
+        .btn.secondary{
+            background:rgba(255,255,255,0.1);
+            color:var(--text-white);
+            border:2px solid var(--border-gold);
+        }
+        .btn.secondary:hover{background:rgba(255,255,255,0.2);transform:translateY(-2px);}
+
+        .error-tip{color:#FF6B6B;font-size:18px;text-align:center;animation:fadeUp 0.6s ease-out;padding:40px 20px;}
+        .hidden{display:none !important;}
+    </style>
+</head>
+<body>
+<div id="errBox" class="error-tip hidden"></div>
+<div id="gameWrap" class="hidden">
+    <div class="page-header">
+        <div class="vip-title">红红VIP专属抽奖</div>
+        <div class="count-badge">剩余抽奖次数：<span id="countLeft">0</span> 次</div>
+    </div>
+
+    <div class="egg-container hidden" id="eggList"></div>
+    <div class="wheel-container hidden" id="wheelWrap">
+        <div class="wheel-outer"><div class="wheel-inner" id="wheel"></div></div>
+        <div class="wheel-pointer"></div>
+    </div>
+    <div class="box-container hidden" id="boxList"></div>
+</div>
+
+<div class="win-modal" id="winModal">
+    <div class="win-card">
+        <div class="win-icon">🎊</div>
+        <div class="win-title">恭喜您中奖啦</div>
+        <div class="win-prize" id="winName"></div>
+        <div class="win-desc" id="winNote"></div>
+        <div class="btn-group">
+            <button class="btn secondary" id="copyVoucher">复制中奖凭证</button>
+            <button class="btn primary" id="closeWin">太棒了！</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const SIGN = "HHGJ_2026_GAME_FINAL_PERFECT";
+const STORAGE_KEY = "HHGJ_DATA_GAME";
+let prizeConfig, winRecords, gameInfo, usedTotal = 0;
+
+function showErr(msg){
+    document.getElementById("errBox").classList.remove("hidden");
+    document.getElementById("errBox").innerText = msg;
+}
+function loadPrize(){
+    const defaultPool = {
+        egg: [{name:"8元彩金",stock:20,rate:52.6},{name:"18元彩金",stock:10,rate:26.3},{name:"28元彩金",stock:5,rate:13.2},{name:"38元彩金",stock:3,rate:7.9}],
+        wheel: [{name:"谢谢参与",color:"#F8F9FA",rate:40},{name:"5元优惠券",color:"#E7F3FF",rate:30},{name:"15元优惠券",color:"#FFF8E6",rate:20},{name:"免单福利",color:"#FFD700",rate:8},{name:"终极大奖",color:"#FF4D4F",rate:2}],
+        box: [{name:"再来一次",rare:"普通",rate:45},{name:"精美小礼品",rare:"普通",rate:35},{name:"20元通用券",rare:"稀有",rate:15},{name:"惊喜大礼包",rare:"史诗",rate:4},{name:"超级终极大奖",rare:"传说",rate:1}]
+    };
+    try{
+        const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        prizeConfig = local.prizePool || defaultPool;
+        winRecords = local.winList || [];
+    }catch(e){prizeConfig = defaultPool; winRecords = [];}
+}
+
+function parseUrl(){
+    const hash = window.location.hash.slice(1);
+    if(!hash) return showErr("无效链接，请联系管理员获取红红VIP专属参与入口");
+    const p = new URLSearchParams(hash);
+    const sign = p.get("s"), uid = decodeURIComponent(p.get("id")), type = p.get("t"), total = Number(p.get("n")), expire = Number(p.get("e"));
+    if(!sign||!uid||!type||!total||!expire) return showErr("链接参数异常，请重新向管理员获取");
+    if(Date.now() > expire) return showErr("链接已过期，请联系管理员重新生成");
+    try{
+        const verify = atob(sign);
+        if(!verify.includes(SIGN) || !verify.includes(uid)) throw new Error("签名不匹配");
+        const sessionKey = `HHGJ_${uid}_${type}_${total}`;
+        const used = Number(localStorage.getItem(sessionKey) || 0);
+        if(used >= total) return showErr("您的本次抽奖次数已用完，请联系管理员获取新的参与资格");
+        gameInfo = {uid,type,total,sessionKey};
+        usedTotal = used;
+        updateCount();
+        document.getElementById("gameWrap").classList.remove("hidden");
+        initGame();
+    }catch(err){showErr("链接无效或已被篡改，请联系管理员");}
+}
+
+function updateCount(){
+    document.getElementById("countLeft").innerText = gameInfo.total - usedTotal;
+}
+
+function initGame(){
+    if(gameInfo.type === "egg"){
+        document.getElementById("eggList").classList.remove("hidden");
+        for(let i=0;i<gameInfo.total;i++){
+            const egg = document.createElement("div");
+            egg.className = "golden-egg"; egg.innerText = "🥚";
+            egg.onclick = () => openEgg(egg);
+            document.getElementById("eggList").appendChild(egg);
+        }
+    }else if(gameInfo.type === "wheel"){
+        document.getElementById("wheelWrap").classList.remove("hidden");
+        const wheel = document.getElementById("wheel"); wheel.innerHTML = "";
+        const list = prizeConfig.wheel, segCount = list.length, segDeg = 360/segCount;
+        list.forEach((item,idx)=>{
+            const seg = document.createElement("div");
+            seg.className = "wheel-segment";
+            seg.style.background = item.color;
+            seg.style.transform = `rotate(${idx*segDeg}deg)`;
+            seg.style.setProperty("--seg",segCount);
+            seg.innerHTML = `<span>${item.name}</span>`;
+            wheel.appendChild(seg);
+        });
+        document.querySelector(".wheel-pointer").onclick = spinWheel;
+    }else{
+        document.getElementById("boxList").classList.remove("hidden");
+        for(let i=0;i<gameInfo.total;i++){
+            const box = document.createElement("div");
+            box.className = "mystery-box"; box.innerText = "🎁";
+            box.onclick = () => openBox(box);
+            document.getElementById("boxList").appendChild(box);
+        }
+    }
+}
+
+function getRandomPrize(type){
+    let rand = Math.random()*100, sum = 0;
+    for(let item of prizeConfig[type]){sum += item.rate; if(rand <= sum) return item;}
+    return prizeConfig[type][0];
+}
+
+function showFullCelebration(){
+    const colors = ["#FFD700","#FF6B6B","#4ECDC4","#45B7D1","#FF9F43","#A55EEA","#2ED573","#FF3366"];
+    const card = document.querySelector(".win-card");
+    for(let i=0;i<50;i++){
+        const c = document.createElement("div");
+        c.className = "confetti-piece";
+        c.style.left = `${Math.random()*100}%`;
+        c.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
+        c.style.animationDelay = `${Math.random()*0.7}s`;
+        card.appendChild(c);
+        setTimeout(()=>c.remove(),3500);
+    }
+    for(let i=0;i<8;i++){
+        const s = document.createElement("div");
+        s.className = "star-deco";
+        s.innerText = "★";
+        s.style.left = `${Math.random()*100}%`;
+        s.style.top = `${Math.random()*100}%`;
+        s.style.animationDelay = `${Math.random()*1.2}s`;
+        card.appendChild(s);
+        setTimeout(()=>s.remove(),3000);
+    }
+}
+
+function showWinResult(prize,extra){
+    const voucher = btoa(`${SIGN}|${gameInfo.uid}|${prize.name}|${Date.now()}|${Math.random().toString(36).slice(2,18)}`).replace(/=/g,"");
+    winRecords.push({voucher,uid:gameInfo.uid,prize:prize.name,extra:extra||"",time:new Date().toLocaleString()});
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({prizePool:prizeConfig,winList:winRecords}));
+    document.getElementById("winName").innerText = prize.name;
+    document.getElementById("winNote").innerText = extra||"";
+    document.getElementById("winModal").classList.add("show");
+    showFullCelebration();
+    window.LAST_VOUCHER = voucher;
+}
+
+document.getElementById("copyVoucher").onclick = () => {
+    navigator.clipboard.writeText(window.LAST_VOUCHER||"");
+    alert("✅ 中奖凭证已复制，红红VIP专属权益已为您记录！");
+};
+document.getElementById("closeWin").onclick = () => {
+    document.getElementById("winModal").classList.remove("show");
+};
+
+function openEgg(el){
+    if(el.classList.contains("opened") || usedTotal >= gameInfo.total) return;
+    el.classList.add("shaking");
+    setTimeout(()=>{
+        el.classList.remove("shaking"); el.classList.add("opened");
+        usedTotal++;
+        localStorage.setItem(gameInfo.sessionKey, usedTotal);
+        updateCount();
+        showWinResult(getRandomPrize("egg"),`第${usedTotal}/${gameInfo.total}次抽奖 · 红红VIP专属福利`);
+    },900);
+}
+
+function spinWheel(){
+    const wheel = document.getElementById("wheel");
+    if(wheel.classList.contains("spinning") || usedTotal >= gameInfo.total) return;
+    usedTotal++;
+    localStorage.setItem(gameInfo.sessionKey, usedTotal);
+    updateCount();
+    const prize = getRandomPrize("wheel");
+    const list = prizeConfig.wheel, idx = list.indexOf(prize), segDeg = 360/list.length;
+    const stopAngle = 360 - (idx*segDeg + segDeg/2);
+    wheel.style.setProperty("--stop-deg",stopAngle+"deg");
+    wheel.classList.add("spinning");
+    setTimeout(()=>{
+        wheel.classList.remove("spinning");
+        showWinResult(prize,`第${usedTotal}/${gameInfo.total}次抽奖 · 红红VIP专属福利`);
+    },7000);
+}
+
+function openBox(el){
+    if(el.classList.contains("opened") || usedTotal >= gameInfo.total) return;
+    el.classList.add("opened");
+    usedTotal++;
+    localStorage.setItem(gameInfo.sessionKey, usedTotal);
+    updateCount();
+    const prize = getRandomPrize("box");
+    showWinResult(prize,`第${usedTotal}/${gameInfo.total}次抽奖 · ${prize.rare}品质 · 红红VIP专属福利`);
+}
+
+window.onload = () => {
+    loadPrize();
+    setTimeout(parseUrl, 80);
+};
+</script>
+</body>
+</html>
