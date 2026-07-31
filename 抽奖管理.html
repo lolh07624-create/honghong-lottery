@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>红红管家 · 管理后台</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei",sans-serif;}
+        body{background:#1E1E2F;color:#fff;padding:20px;}
+        .box{max-width:900px;margin:0 auto;}
+        .card{background:#252538;border-radius:8px;padding:16px;margin-bottom:16px;}
+        .tit{color:#FFC107;font-size:16px;margin-bottom:12px;font-weight:bold;}
+        .row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+        .col{flex:1;min-width:150px;}
+        label{display:block;font-size:12px;color:#ccc;margin-bottom:4px;}
+        input,select{width:100%;padding:8px;border-radius:4px;border:none;background:#33334A;color:#fff;}
+        .btn-yellow{width:100%;padding:10px;background:linear-gradient(90deg,#B8860B,#FFC107);border:none;border-radius:4px;color:#000;font-weight:bold;cursor:pointer;}
+        .tab{display:flex;gap:8px;margin-bottom:10px;}
+        .tab button{padding:6px 12px;border:none;border-radius:4px;background:#33334A;color:#ccc;cursor:pointer;}
+        .tab button.active{background:#FFC107;color:#000;}
+        table{width:100%;border-collapse:collapse;margin-bottom:10px;}
+        th,td{padding:8px;text-align:left;border-bottom:1px solid #444;}
+        th{color:#FFC107;}
+        .btn-group{display:flex;gap:8px;flex-wrap:wrap;}
+        .btn{padding:6px 12px;border:none;border-radius:4px;cursor:pointer;font-size:12px;}
+        .btn.green{background:#22C55E;color:#fff;}
+        .btn.blue{background:#3B82F6;color:#fff;}
+        .btn.gray{background:#33334A;color:#fff;}
+        .btn.red{background:#EF4444;color:#fff;}
+        .check-row{display:flex;gap:8px;align-items:center;}
+        .check-row input{flex:1;}
+        .btn-check{padding:8px 16px;background:#22C55E;border:none;border-radius:4px;color:#fff;cursor:pointer;}
+        .list-item{padding:8px;background:#33334A;border-radius:4px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;font-size:12px;flex-wrap:wrap;gap:6px;}
+        .modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:999;padding:15px;}
+        .modal.show{display:flex;}
+        .modal-content{background:#252538;padding:20px;border-radius:8px;text-align:center;max-width:400px;width:100%;border:1px solid #FFC107;}
+        .link-text{background:#33334A;padding:8px;border-radius:4px;margin:10px 0;font-size:12px;word-break:break-all;color:#ddd;}
+        canvas{background:#fff;padding:8px;border-radius:4px;margin:10px auto;display:block;}
+        .hide{display:none;}
+    </style>
+</head>
+<body>
+<div class="box">
+    <div class="card">
+        <div class="tit">🔗 生成专属活动链接</div>
+        <div class="row">
+            <div class="col">
+                <label>会员ID（必填）</label>
+                <input type="text" id="mid" value="180652790">
+            </div>
+            <div class="col">
+                <label>游戏类型</label>
+                <select id="gtype">
+                    <option value="egg">砸金蛋</option>
+                    <option value="wheel">幸运转盘</option>
+                    <option value="box">神秘盲盒</option>
+                </select>
+            </div>
+            <div class="col">
+                <label>可抽奖次数</label>
+                <input type="number" id="gtimes" value="3" min="1">
+            </div>
+            <div class="col">
+                <label>有效期（小时）</label>
+                <input type="number" id="ghour" value="24" min="1">
+            </div>
+        </div>
+        <div class="tit" style="font-size:13px;color:#ccc;">⚠️ 请先填写下方「游戏页面文件名」，再生成链接</div>
+        <div class="row">
+            <div class="col" style="flex:2;">
+                <label>游戏页面文件名（和本文件同文件夹）</label>
+                <input type="text" id="gameFileName" value="https://lolh07624-create.github.io/honghong-lottery/抽奖游戏.html">
+            </div>
+        </div>
+        <button class="btn-yellow" id="genBtn">一键生成专属链接+二维码</button>
+    </div>
+
+    <div class="card">
+        <div class="tit">🏅 奖池管理</div>
+        <div class="tab">
+            <button class="tab-btn active" data-type="egg">砸金蛋</button>
+            <button class="tab-btn" data-type="wheel">幸运转盘</button>
+            <button class="tab-btn" data-type="box">神秘盲盒</button>
+        </div>
+        <table>
+            <thead><tr><th>奖品名称</th><th>属性/库存</th><th>概率%</th><th>操作</th></tr></thead>
+            <tbody id="poolBody"></tbody>
+        </table>
+        <div class="btn-group">
+            <button class="btn green" id="addPrize">+ 添加奖品</button>
+            <button class="btn blue" id="exportPool">导出配置</button>
+            <button class="btn gray" id="resetPool">恢复默认</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="tit">🔍 兑奖凭证查验</div>
+        <div class="check-row">
+            <input type="text" id="checkCode" placeholder="粘贴中奖凭证">
+            <button class="btn-check" id="checkBtn">立即核验</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="tit">📋 数据记录</div>
+        <div class="tab">
+            <button class="tab-btn active" data-list="link">专属链接</button>
+            <button class="tab-btn" data-list="win">中奖台账</button>
+            <button class="tab-btn" data-list="log">操作日志</button>
+        </div>
+        <div id="linkListBox">
+            <div id="linkList"></div>
+            <div class="btn-group" style="margin-top:8px;">
+                <button class="btn blue" id="exportLink">批量导出</button>
+                <button class="btn red" id="clearLink">清空</button>
+            </div>
+        </div>
+        <div id="winListBox" class="hide">
+            <div id="winList"></div>
+            <div class="btn-group" style="margin-top:8px;">
+                <button class="btn blue" id="exportWin">导出台账</button>
+                <button class="btn red" id="clearWin">清空</button>
+            </div>
+        </div>
+        <div id="logListBox" class="hide">
+            <div id="logList"></div>
+            <div class="btn-group" style="margin-top:8px;">
+                <button class="btn blue" id="exportLog">导出日志</button>
+                <button class="btn red" id="clearLog">清空</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="qrcodeModal">
+    <div class="modal-content">
+        <h3 style="color:#FFC107;margin-bottom:10px;">活动链接与二维码</h3>
+        <div class="link-text" id="showLink"></div>
+        <div class="btn-group" style="justify-content:center;margin-bottom:10px;">
+            <button class="btn blue" id="copyLink">一键复制链接</button>
+        </div>
+        <canvas id="qrcodeCanvas"></canvas>
+        <div class="btn-group" style="justify-content:center;">
+            <button class="btn blue" id="saveQr">保存二维码</button>
+            <button class="btn gray" id="closeQr">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const SIGN = "HHGJ_2026_GAME_PROFESSIONAL";
+const STORAGE_KEY = "HHGJ_DATA_GAME";
+let currentPool = "egg", currentList = "link";
+let prizePool, linkList, winList, logList, currentFullLink = "";
+
+function saveData(){localStorage.setItem(STORAGE_KEY, JSON.stringify({prizePool, linkList, winList, logList}));}
+function loadData(){
+    const defaultPool = {
+        egg: [{name:"8元彩金",stock:20,rate:52.6},{name:"18元彩金",stock:10,rate:26.3},{name:"28元彩金",stock:5,rate:13.2},{name:"38元彩金",stock:3,rate:7.9}],
+        wheel: [{name:"谢谢参与",color:"#eee",rate:40},{name:"5元券",color:"#DBEAFE",rate:30},{name:"15元券",color:"#FEF3C7",rate:20},{name:"免单",color:"#FBBF24",rate:8},{name:"大奖",color:"#EF4444",rate:2}],
+        box: [{name:"再来一次",rare:"普通",rate:45},{name:"小礼品",rare:"普通",rate:35},{name:"20元券",rare:"稀有",rate:15},{name:"大礼包",rare:"史诗",rate:4},{name:"终极大奖",rare:"传说",rate:1}]
+    };
+    try{
+        const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        prizePool = d.prizePool || defaultPool; linkList = d.linkList || []; winList = d.winList || []; logList = d.logList || [];
+    }catch(e){prizePool = defaultPool; linkList = []; winList = []; logList = [];}
+}
+function addLog(act, det){logList.unshift({time:new Date().toLocaleString(), action:act, detail:det}); logList.length>500&&logList.pop(); saveData();}
+
+function renderPool(){
+    const tb = document.getElementById("poolBody"); tb.innerHTML = "";
+    prizePool[currentPool].forEach((p,i)=>{
+        const tr = document.createElement("tr");
+        if(currentPool==="egg") tr.innerHTML = `<td><input value="${p.name}" class="p-name" data-i="${i}"></td><td><input type="number" value="${p.stock}" class="p-stock" data-i="${i}"></td><td>${p.rate}%</td><td><button class="btn red del-p" data-i="${i}">删除</button></td>`;
+        else if(currentPool==="wheel") tr.innerHTML = `<td><input value="${p.name}" class="p-name" data-i="${i}"></td><td><input type="color" value="${p.color}" class="p-color" data-i="${i}"></td><td>${p.rate}%</td><td><button class="btn red del-p" data-i="${i}">删除</button></td>`;
+        else tr.innerHTML = `<td><input value="${p.name}" class="p-name" data-i="${i}"></td><td><select class="p-rare" data-i="${i}"><option ${p.rare==="普通"?"selected":""}>普通</option><option ${p.rare==="稀有"?"selected":""}>稀有</option><option ${p.rare==="史诗"?"selected":""}>史诗</option><option ${p.rare==="传说"?"selected":""}>传说</option></select></td><td>${p.rate}%</td><td><button class="btn red del-p" data-i="${i}">删除</button></td>`;
+        tb.appendChild(tr);
+    });
+    tb.querySelectorAll("input,select").forEach(inp=>{inp.oninput=()=>{const idx=Number(inp.dataset.i); if(inp.classList.contains("p-name")) prizePool[currentPool][idx].name=inp.value; if(inp.classList.contains("p-stock")) prizePool[currentPool][idx].stock=Number(inp.value); if(inp.classList.contains("p-color")) prizePool[currentPool][idx].color=inp.value; if(inp.classList.contains("p-rare")) prizePool[currentPool][idx].rare=inp.value; saveData();};});
+    tb.querySelectorAll(".del-p").forEach(b=>{b.onclick=()=>{if(prizePool[currentPool].length>1){prizePool[currentPool].splice(Number(b.dataset.i),1); renderPool(); saveData(); addLog("删除奖品",currentPool);}else alert("至少保留1个奖品");};});
+}
+
+function renderLink(){document.getElementById("linkList").innerHTML=linkList.map(x=>`<div class="list-item"><span>${x.mid} | ${x.type} | ${x.times}次 | ${x.hour}小时</span><div class="btn-group"><button class="btn blue copy-link" data-link="${x.full}">复制链接</button><button class="btn red del-link" data-sign="${x.sign}">删除</button></div></div>`).join(""); document.querySelectorAll(".copy-link").forEach(b=>{b.onclick=()=>{navigator.clipboard.writeText(b.dataset.link);alert("链接已复制！");};}); document.querySelectorAll(".del-link").forEach(b=>{b.onclick=()=>{linkList=linkList.filter(x=>x.sign!==b.dataset.sign);renderLink();saveData();addLog("删除链接","");};});}
+function renderWin(){document.getElementById("winList").innerHTML=winList.map(x=>`<div class="list-item"><span>${x.mid} | ${x.prize} | ${x.time}</span><button class="btn blue copy-code" data-code="${x.voucher}">复制凭证</button></div>`).join(""); document.querySelectorAll(".copy-code").forEach(b=>{b.onclick=()=>{navigator.clipboard.writeText(b.dataset.code);alert("凭证已复制！");};});}
+function renderLog(){document.getElementById("logList").innerHTML=logList.map(x=>`<div class="list-item">[${x.time}] ${x.action} - ${x.detail}</div>`).join("")||"<div class='list-item'>暂无记录</div>";}
+
+document.getElementById("genBtn").onclick=function(){
+    const mid=document.getElementById("mid").value.trim(),type=document.getElementById("gtype").value,times=Number(document.getElementById("gtimes").value),hour=Number(document.getElementById("ghour").value),gameFile=document.getElementById("gameFileName").value.trim();
+    if(!mid||!times||!hour||!gameFile)return alert("请填写完整信息！");
+    const rand=Math.random().toString(36).slice(2,14).toUpperCase(),sign=btoa(`${SIGN}|${mid}|${Date.now()}|${rand}`).replace(/=/g,""),expire=Date.now()+hour*3600000;
+    currentFullLink=gameFile+`#s=${sign}&id=${encodeURIComponent(mid)}&t=${type}&n=${times}&e=${expire}`;
+    linkList.push({sign,mid,type,times,hour,expire,full:currentFullLink,time:new Date().toLocaleString()});
+    saveData();renderLink();addLog("生成链接",`会员${mid}，${type}，${times}次`);
+    document.getElementById("showLink").innerText=currentFullLink;
+    try{QRCode.toCanvas(document.getElementById("qrcodeCanvas"),currentFullLink,{width:220},e=>e?alert("二维码生成失败"):document.getElementById("qrcodeModal").classList.add("show"));}catch(e){alert("二维码库加载失败，请联网后重试");}
+};
+document.getElementById("copyLink").onclick=()=>{navigator.clipboard.writeText(currentFullLink);alert("链接已复制！");};
+document.getElementById("saveQr").onclick=()=>{const a=document.createElement("a");a.href=document.getElementById("qrcodeCanvas").toDataURL();a.download="活动二维码.png";a.click();};
+document.getElementById("closeQr").onclick=()=>document.getElementById("qrcodeModal").classList.remove("show");
+
+document.querySelectorAll(".tab-btn[data-type]").forEach(b=>{b.onclick=()=>{currentPool=b.dataset.type;document.querySelectorAll(".tab-btn[data-type]").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderPool();addLog("切换玩法",currentPool);};});
+document.getElementById("addPrize").onclick=()=>{if(currentPool==="egg")prizePool.egg.push({name:"新奖品",stock:5,rate:5});else if(currentPool==="wheel")prizePool.wheel.push({name:"新奖品",color:"#fff",rate:5});else prizePool.box.push({name:"新奖品",rare:"普通",rate:5});renderPool();saveData();addLog("添加奖品","");};
+document.getElementById("resetPool").onclick=()=>{if(confirm("确定恢复默认？")){prizePool={egg:[{name:"8元彩金",stock:20,rate:52.6},{name:"18元彩金",stock:10,rate:26.3},{name:"28元彩金",stock:5,rate:13.2},{name:"38元彩金",stock:3,rate:7.9}],wheel:[{name:"谢谢参与",color:"#eee",rate:40},{name:"5元券",color:"#DBEAFE",rate:30},{name:"15元券",color:"#FEF3C7",rate:20},{name:"免单",color:"#FBBF24",rate:8},{name:"大奖",color:"#EF4444",rate:2}],box:[{name:"再来一次",rare:"普通",rate:45},{name:"小礼品",rare:"普通",rate:35},{name:"20元券",rare:"稀有",rate:15},{name:"大礼包",rare:"史诗",rate:4},{name:"终极大奖",rare:"传说",rate:1}]};renderPool();saveData();addLog("恢复默认奖池","");}};
+document.getElementById("exportPool").onclick=()=>{let csv="奖品,属性/库存,概率,玩法\n";Object.entries(prizePool).forEach(([k,a])=>a.forEach(p=>csv+=`${p.name},${p.stock||p.color||p.rare},${p.rate},${k}\n`));const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv]));a.download="奖池配置.csv";a.click();addLog("导出配置","");};
+
+document.querySelectorAll(".tab-btn[data-list]").forEach(b=>{b.onclick=()=>{currentList=b.dataset.list;document.querySelectorAll(".tab-btn[data-list]").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById("linkListBox").classList.toggle("hide",currentList!=="link");document.getElementById("winListBox").classList.toggle("hide",currentList!=="win");document.getElementById("logListBox").classList.toggle("hide",currentList!=="log");};});
+document.getElementById("exportLink").onclick=()=>{let csv="会员ID,玩法,次数,有效期,链接\n";linkList.forEach(x=>csv+=`${x.mid},${x.type},${x.times},${x.hour}小时,${x.full}\n`);const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv]));a.download="专属链接.csv";a.click();};
+document.getElementById("clearLink").onclick=()=>{if(confirm("确定清空？")){linkList=[];renderLink();saveData();}};
+document.getElementById("exportWin").onclick=()=>{let csv="会员,奖品,时间,凭证\n";winList.forEach(x=>csv+=`${x.mid},${x.prize},${x.time},${x.voucher}\n`);const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv]));a.download="中奖台账.csv";a.click();};
+document.getElementById("clearWin").onclick=()=>{if(confirm("确定清空？")){winList=[];renderWin();saveData();}};
+document.getElementById("exportLog").onclick=()=>{let csv="时间,操作,详情\n";logList.forEach(x=>csv+=`${x.time},${x.action},${x.detail}\n`);const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv]));a.download="操作日志.csv";a.click();};
+document.getElementById("clearLog").onclick=()=>{if(confirm("确定清空？")){logList=[];renderLog();saveData();}};
+
+document.getElementById("checkBtn").onclick=()=>{const c=document.getElementById("checkCode").value.trim();if(!c)return alert("请输入凭证");const r=winList.find(x=>x.voucher===c);r?alert(`核验通过：${r.mid} - ${r.prize} - ${r.time}`):alert("无效凭证");};
+
+window.onload=()=>{loadData();renderPool();renderLink();renderWin();renderLog();};
+</script>
+</body>
+</html>
