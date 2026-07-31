@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>红红管家 · 抽奖管理后台</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased;}
+        :root{
+            --gold-main:#FFD700;
+            --gold-light:#FFF5CC;
+            --gold-dark:#B8860B;
+            --bg-main:#121220;
+            --bg-card:#1A1A33;
+            --text-white:#FFFFFF;
+            --text-gray:#D0D0E8;
+            --border-gold:rgba(255,215,0,0.3);
+            --shadow-gold:0 0 30px rgba(255,215,0,0.4);
+            --btn-primary:linear-gradient(90deg,var(--gold-dark),var(--gold-main));
+            --btn-hover:linear-gradient(90deg,#C99A00,var(--gold-light));
+        }
+        body{
+            background:radial-gradient(circle at top center,#2A2A55 0%,var(--bg-main) 70%);
+            color:var(--text-white);
+            min-height:100vh;
+            padding:30px 20px;
+        }
+        .container{max-width:900px;margin:0 auto;}
+        .page-title{
+            text-align:center;
+            font-size:28px;
+            font-weight:900;
+            color:var(--gold-main);
+            margin-bottom:30px;
+            letter-spacing:3px;
+            text-shadow:0 0 15px rgba(255,215,0,0.5);
+        }
+        .panel{
+            background:var(--bg-card);
+            border-radius:20px;
+            padding:28px;
+            margin-bottom:24px;
+            border:1px solid var(--border-gold);
+            box-shadow:0 10px 40px rgba(0,0,0,0.5);
+        }
+        .panel-title{
+            font-size:20px;
+            font-weight:800;
+            color:var(--gold-main);
+            margin-bottom:20px;
+            display:flex;
+            align-items:center;
+            gap:8px;
+        }
+        .tip{
+            font-size:14px;
+            color:#FFB86C;
+            margin-bottom:16px;
+            padding:8px 12px;
+            background:rgba(255,184,108,0.1);
+            border-radius:8px;
+        }
+        .form-row{
+            display:flex;
+            gap:16px;
+            align-items:center;
+            margin-bottom:18px;
+            flex-wrap:wrap;
+        }
+        .form-col{flex:1;min-width:200px;}
+        label{
+            display:block;
+            font-size:15px;
+            color:var(--text-gray);
+            margin-bottom:6px;
+            font-weight:600;
+        }
+        input,select{
+            width:100%;
+            padding:10px 14px;
+            border-radius:8px;
+            border:1px solid var(--border-gold);
+            background:rgba(255,255,255,0.08);
+            color:var(--text-white);
+            font-size:15px;
+            outline:none;
+            transition:all 0.2s ease;
+        }
+        input:focus,select:focus{border-color:var(--gold-main);box-shadow:0 0 12px rgba(255,215,0,0.3);}
+        .btn{
+            padding:12px 28px;
+            border-radius:10px;
+            border:none;
+            font-weight:700;
+            font-size:16px;
+            cursor:pointer;
+            transition:all 0.25s ease;
+        }
+        .btn.primary{
+            background:var(--btn-primary);
+            color:#000;
+            box-shadow:0 4px 15px rgba(255,215,0,0.4);
+        }
+        .btn.primary:hover{background:var(--btn-hover);transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,215,0,0.6);}
+        .btn.success{background:#2ED573;color:#000;}
+        .btn.danger{background:#FF4D4F;color:#fff;}
+        .btn.secondary{background:rgba(255,255,255,0.1);color:var(--text-white);border:1px solid var(--border-gold);}
+        .btn.secondary:hover{background:rgba(255,255,255,0.18);}
+
+        /* 奖池表格 */
+        .prize-table{width:100%;border-collapse:collapse;margin-top:12px;}
+        .prize-table th,.prize-table td{
+            padding:12px 10px;
+            text-align:center;
+            border-bottom:1px solid rgba(255,255,255,0.08);
+            font-size:14px;
+        }
+        .prize-table th{color:var(--gold-main);font-weight:700;}
+        .prize-table td input{width:90%;padding:6px 8px;font-size:14px;}
+        .tab-group{display:flex;gap:12px;margin-bottom:18px;}
+        .tab-btn{
+            padding:8px 18px;
+            border-radius:8px;
+            border:none;
+            font-weight:600;
+            font-size:14px;
+            cursor:pointer;
+            background:rgba(255,255,255,0.1);
+            color:var(--text-gray);
+            transition:all 0.2s ease;
+        }
+        .tab-btn.active{background:var(--gold-main);color:#000;box-shadow:0 0 15px rgba(255,215,0,0.4);}
+        .tab-content{display:none;}
+        .tab-content.active{display:block;}
+
+        /* 结果展示 */
+        .result-box{
+            margin-top:20px;
+            padding:16px;
+            background:rgba(0,0,0,0.2);
+            border-radius:10px;
+            border:1px solid var(--border-gold);
+            word-break:break-all;
+        }
+        .qrcode-box{margin-top:16px;text-align:center;}
+        .qrcode-box img{max-width:200px;border-radius:8px;border:3px solid var(--gold-main);box-shadow:var(--shadow-gold);}
+        .copy-tip{font-size:13px;color:var(--text-gray);margin-top:8px;}
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="page-title">红红管家 · 抽奖管理后台</h1>
+
+    <!-- 生成专属链接 -->
+    <div class="panel">
+        <h2 class="panel-title">🎫 生成专属活动链接</h2>
+        <div class="tip">⚠️ 游戏页面文件名必须和仓库里一致，生成后仅该链接有效，次数用完即止</div>
+        <div class="form-row">
+            <div class="form-col">
+                <label>会员ID（必填）</label>
+                <input type="text" id="memberId" placeholder="请输入会员唯一ID" value="">
+            </div>
+            <div class="form-col">
+                <label>游戏类型</label>
+                <select id="gameType">
+                    <option value="egg">砸金蛋</option>
+                    <option value="wheel">幸运转盘</option>
+                    <option value="box">神秘盲盒</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-col">
+                <label>可抽奖次数</label>
+                <input type="number" id="totalCount" min="1" max="99" value="3">
+            </div>
+            <div class="form-col">
+                <label>有效期（小时）</label>
+                <input type="number" id="expireHour" min="1" max="720" value="24">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-col" style="flex:2;">
+                <label>游戏页面文件名（和仓库同目录）</label>
+                <input type="text" id="gameFile" value="抽奖游戏.html">
+            </div>
+        </div>
+        <button class="btn primary" id="genBtn">✅ 一键生成专属链接+二维码</button>
+
+        <div class="result-box" id="resultBox" style="display:none;">
+            <div style="margin-bottom:10px;font-weight:600;color:var(--gold-main);">生成结果：</div>
+            <div id="linkText" style="font-size:14px;line-height:1.6;"></div>
+            <button class="btn secondary" style="margin-top:12px;" id="copyLink">复制链接</button>
+            <div class="qrcode-box" id="qrcodeWrap"></div>
+            <div class="copy-tip">⚠️ 仅该链接/二维码有效，次数用完或过期后自动失效</div>
+        </div>
+    </div>
+
+    <!-- 奖池管理 -->
+    <div class="panel">
+        <h2 class="panel-title">🏆 奖池管理</h2>
+        <div class="tab-group">
+            <button class="tab-btn active" data-tab="egg">砸金蛋</button>
+            <button class="tab-btn" data-tab="wheel">幸运转盘</button>
+            <button class="tab-btn" data-tab="box">神秘盲盒</button>
+        </div>
+
+        <!-- 砸金蛋奖池 -->
+        <div class="tab-content active" id="tab-egg">
+            <table class="prize-table">
+                <thead>
+                    <tr>
+                        <th>奖品名称</th>
+                        <th>库存数量</th>
+                        <th>中奖概率%</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="eggBody"></tbody>
+            </table>
+            <div style="margin-top:16px;display:flex;gap:12px;">
+                <button class="btn success" id="addEgg">+ 添加奖品</button>
+                <button class="btn primary" id="saveEgg">💾 保存砸金蛋奖池</button>
+                <button class="btn secondary" id="resetEgg">恢复默认</button>
+            </div>
+        </div>
+
+        <!-- 幸运转盘奖池 -->
+        <div class="tab-content" id="tab-wheel">
+            <table class="prize-table">
+                <thead>
+                    <tr>
+                        <th>奖品名称</th>
+                        <th>区块颜色</th>
+                        <th>中奖概率%</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="wheelBody"></tbody>
+            </table>
+            <div style="margin-top:16px;display:flex;gap:12px;">
+                <button class="btn success" id="addWheel">+ 添加奖品</button>
+                <button class="btn primary" id="saveWheel">💾 保存转盘奖池</button>
+                <button class="btn secondary" id="resetWheel">恢复默认</button>
+            </div>
+        </div>
+
+        <!-- 神秘盲盒奖池 -->
+        <div class="tab-content" id="tab-box">
+            <table class="prize-table">
+                <thead>
+                    <tr>
+                        <th>奖品名称</th>
+                        <th>稀有度</th>
+                        <th>中奖概率%</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="boxBody"></tbody>
+            </table>
+            <div style="margin-top:16px;display:flex;gap:12px;">
+                <button class="btn success" id="addBox">+ 添加奖品</button>
+                <button class="btn primary" id="saveBox">💾 保存盲盒奖池</button>
+                <button class="btn secondary" id="resetBox">恢复默认</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+<script>
+// 和游戏页签名完全同步
+const SIGN = "HHGJ_2026_GAME_FINAL_PERFECT";
+const STORAGE_KEY = "HHGJ_DATA_GAME";
+let prizePool = {
+    egg: [{name:"8元彩金",stock:20,rate:52.6},{name:"18元彩金",stock:10,rate:26.3},{name:"28元彩金",stock:5,rate:13.2},{name:"38元彩金",stock:3,rate:7.9}],
+    wheel: [{name:"谢谢参与",color:"#F8F8F8",rate:40},{name:"5元优惠券",color:"#E6F2FF",rate:30},{name:"15元优惠券",color:"#FFF8E0",rate:20},{name:"免单福利",color:"#FFD700",rate:8},{name:"终极大奖",color:"#FF4D4F",rate:2}],
+    box: [{name:"再来一次",rare:"普通",rate:45},{name:"精美小礼品",rare:"普通",rate:35},{name:"20元通用券",rare:"稀有",rate:15},{name:"惊喜大礼包",rare:"史诗",rate:4},{name:"超级终极大奖",rare:"传说",rate:1}]
+};
+
+// 加载本地配置
+function loadConfig(){
+    try{
+        const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        if(d.prizePool) prizePool = d.prizePool;
+    }catch(e){}
+    renderAll();
+}
+function saveConfig(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({prizePool}));
+    alert("✅ 配置已保存，游戏页自动同步生效");
+}
+
+// 渲染表格
+function renderEgg(){
+    const t = document.getElementById("eggBody"); t.innerHTML="";
+    prizePool.egg.forEach((p,i)=>{
+        t.innerHTML += `<tr>
+            <td><input type="text" class="e-name" value="${p.name}"></td>
+            <td><input type="number" class="e-stock" min="0" value="${p.stock}"></td>
+            <td><input type="number" class="e-rate" min="0" max="100" step="0.1" value="${p.rate}"></td>
+            <td><button class="btn danger" onclick="delEgg(${i})">删除</button></td>
+        </tr>`;
+    });
+}
+function renderWheel(){
+    const t = document.getElementById("wheelBody"); t.innerHTML="";
+    prizePool.wheel.forEach((p,i)=>{
+        t.innerHTML += `<tr>
+            <td><input type="text" class="w-name" value="${p.name}"></td>
+            <td><input type="color" class="w-color" value="${p.color}"></td>
+            <td><input type="number" class="w-rate" min="0" max="100" step="0.1" value="${p.rate}"></td>
+            <td><button class="btn danger" onclick="delWheel(${i})">删除</button></td>
+        </tr>`;
+    });
+}
+function renderBox(){
+    const t = document.getElementById("boxBody"); t.innerHTML="";
+    prizePool.box.forEach((p,i)=>{
+        t.innerHTML += `<tr>
+            <td><input type="text" class="b-name" value="${p.name}"></td>
+            <td>
+                <select class="b-rare">
+                    <option value="普通" ${p.rare==="普通"?"selected":""}>普通</option>
+                    <option value="稀有" ${p.rare==="稀有"?"selected":""}>稀有</option>
+                    <option value="史诗" ${p.rare==="史诗"?"selected":""}>史诗</option>
+                    <option value="传说" ${p.rare==="传说"?"selected":""}>传说</option>
+                </select>
+            </td>
+            <td><input type="number" class="b-rate" min="0" max="100" step="0.1" value="${p.rate}"></td>
+            <td><button class="btn danger" onclick="delBox(${i})">删除</button></td>
+        </tr>`;
+    });
+}
+function renderAll(){renderEgg();renderWheel();renderBox();}
+
+// 增删操作
+document.getElementById("addEgg").onclick=()=>{prizePool.egg.push({name:"新奖品",stock:10,rate:5});renderEgg();};
+document.getElementById("addWheel").onclick=()=>{prizePool.wheel.push({name:"新奖品",color:"#FFFFFF",rate:5});renderWheel();};
+document.getElementById("addBox").onclick=()=>{prizePool.box.push({name:"新奖品",rare:"普通",rate:5});renderBox();};
+window.delEgg=i=>{prizePool.egg.splice(i,1);renderEgg();};
+window.delWheel=i=>{prizePool.wheel.splice(i,1);renderWheel();};
+window.delBox=i=>{prizePool.box.splice(i,1);renderBox();};
+
+// 保存奖池
+document.getElementById("saveEgg").onclick=()=>{
+    const list = [];
+    document.querySelectorAll("#eggBody tr").forEach(tr=>{
+        list.push({
+            name:tr.querySelector(".e-name").value,
+            stock:Number(tr.querySelector(".e-stock").value),
+            rate:Number(tr.querySelector(".e-rate").value)
+        });
+    });
+    prizePool.egg = list; saveConfig();
+};
+document.getElementById("saveWheel").onclick=()=>{
+    const list = [];
+    document.querySelectorAll("#wheelBody tr").forEach(tr=>{
+        list.push({
+            name:tr.querySelector(".w-name").value,
+            color:tr.querySelector(".w-color").value,
+            rate:Number(tr.querySelector(".w-rate").value)
+        });
+    });
+    prizePool.wheel = list; saveConfig();
+};
+document.getElementById("saveBox").onclick=()=>{
+    const list = [];
+    document.querySelectorAll("#boxBody tr").forEach(tr=>{
+        list.push({
+            name:tr.querySelector(".b-name").value,
+            rare:tr.querySelector(".b-rare").value,
+            rate:Number(tr.querySelector(".b-rate").value)
+        });
+    });
+    prizePool.box = list; saveConfig();
+};
+
+// 恢复默认
+document.getElementById("resetEgg").onclick=()=>{
+    if(confirm("确定恢复砸金蛋默认奖池？")){
+        prizePool.egg = [{name:"8元彩金",stock:20,rate:52.6},{name:"18元彩金",stock:10,rate:26.3},{name:"28元彩金",stock:5,rate:13.2},{name:"38元彩金",stock:3,rate:7.9}];
+        renderEgg();saveConfig();
+    }
+};
+document.getElementById("resetWheel").onclick=()=>{
+    if(confirm("确定恢复转盘默认奖池？")){
+        prizePool.wheel = [{name:"谢谢参与",color:"#F8F8F8",rate:40},{name:"5元优惠券",color:"#E6F2FF",rate:30},{name:"15元优惠券",color:"#FFF8E0",rate:20},{name:"免单福利",color:"#FFD700",rate:8},{name:"终极大奖",color:"#FF4D4F",rate:2}];
+        renderWheel();saveConfig();
+    }
+};
+document.getElementById("resetBox").onclick=()=>{
+    if(confirm("确定恢复盲盒默认奖池？")){
+        prizePool.box = [{name:"再来一次",rare:"普通",rate:45},{name:"精美小礼品",rare:"普通",rate:35},{name:"20元通用券",rare:"稀有",rate:15},{name:"惊喜大礼包",rare:"史诗",rate:4},{name:"超级终极大奖",rare:"传说",rate:1}];
+        renderBox();saveConfig();
+    }
+};
+
+// 标签切换
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.onclick=()=>{
+        document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
+    };
+});
+
+// 生成链接+二维码
+document.getElementById("genBtn").onclick=async()=>{
+    const id = document.getElementById("memberId").value.trim();
+    const type = document.getElementById("gameType").value;
+    const num = Number(document.getElementById("totalCount").value);
+    const hour = Number(document.getElementById("expireHour").value);
+    const file = document.getElementById("gameFile").value.trim();
+    if(!id||!num||!file) return alert("请填写完整必填信息");
+    const expire = Date.now() + hour*3600*1000;
+    const sign = btoa(`${SIGN}|${id}|${type}|${num}|${expire}`).replace(/=/g,"");
+    const link = `${file}#s=${sign}&id=${encodeURIComponent(id)}&t=${type}&n=${num}&e=${expire}`;
+    document.getElementById("resultBox").style.display="block";
+    document.getElementById("linkText").innerText = link;
+    document.getElementById("qrcodeWrap").innerHTML = "";
+    await QRCode.toCanvas(link,{width:200,margin:2,color:{dark:"#1A1A33",light:"#FFD700"}},function(err,canvas){
+        if(err) return console.error(err);
+        document.getElementById("qrcodeWrap").appendChild(canvas);
+    });
+};
+
+// 复制链接
+document.getElementById("copyLink").onclick=()=>{
+    const t = document.getElementById("linkText").innerText;
+    navigator.clipboard.writeText(t).then(()=>alert("✅ 链接已复制成功！"));
+};
+
+window.onload=loadConfig;
+</script>
+</body>
+</html>
